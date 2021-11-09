@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 
 void main() {
   runApp(MaterialApp(
@@ -10,8 +13,32 @@ void main() {
   ));
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({ Key? key }) : super(key: key);
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late BluetoothConnection connection;
+  var text="";
+@override
+void initState(){
+  super.initState();
+
+  Future.delayed(const Duration(seconds:0),() async{
+    try{
+      connection = await BluetoothConnection.toAddress('98:D3:31:80:74:A6');
+      connection.input?.listen((Uint8List data){
+       if(ascii.decode(data).contains('!')){
+       connection.finish();}
+      });
+    }catch(exception){
+      print("can't connect!");
+    }
+  });
+}
 
   @override
   Widget build(BuildContext context) {
