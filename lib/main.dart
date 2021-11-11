@@ -22,49 +22,65 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late BluetoothConnection connection;
+  BluetoothConnection? connection;
   var text = "";
   String temperature = 'N/A';
   String steps = 'N/A';
   String pulse = 'N/A';
 
+  void toggleBluetooth() async {
+    try {
+      if (connection?.isConnected ?? false) {
+        connection?.close();
+        connection = null;
+        setState(() {
+          temperature = 'N/A';
+          steps = 'N/A';
+          pulse = 'N/A';
+        });
+        return;
+      } else {
+        connection?.close();
+        connection = await BluetoothConnection.toAddress('98:D3:31:80:74:A6');
+      }
+
+      var currentData = "";
+
+      connection?.input?.listen((Uint8List data) {
+        final dataFromBand = ascii.decode(data);
+        for (final character in dataFromBand.characters) {
+          if (character == '\n') {
+            final split = currentData.split(',');
+            if (split.length != 3) {
+              currentData = "";
+              return;
+            }
+            currentData = "";
+            setState(() {
+              temperature = int.tryParse(split[0])?.toString() ?? temperature;
+              steps = int.tryParse(split[1])?.toString() ?? steps;
+              pulse = int.tryParse(split[2])?.toString() ?? pulse;
+            });
+          } else {
+            currentData += character;
+          }
+        }
+        if (ascii.decode(data).contains('!')) {
+          connection?.finish();
+        }
+      });
+    } catch (exception) {
+      print("can't connect!");
+      print(exception);
+      connection?.close();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
 
-    Future.delayed(const Duration(seconds: 0), () async {
-      try {
-        connection = await BluetoothConnection.toAddress('98:D3:31:80:74:A6');
-        var currentData = "";
-
-        connection.input?.listen((Uint8List data) {
-          String dataFromBand = ascii.decode(data);
-          dataFromBand.characters.forEach((String character) {
-            if (character == '\n') {
-              final split = currentData.split(',');
-              if (split.length != 3) {
-                currentData = "";
-                return;
-              }
-              currentData = "";
-              setState(() {
-                temperature = int.tryParse(split[0])?.toString() ?? temperature;
-                steps = int.tryParse(split[1])?.toString() ?? steps;
-                pulse = int.tryParse(split[2])?.toString() ?? pulse;
-              });
-            } else {
-              currentData += character;
-            }
-          });
-          if (ascii.decode(data).contains('!')) {
-            connection.finish();
-          }
-        });
-      } catch (exception) {
-        print("can't connect!");
-        connection.close();
-      }
-    });
+    toggleBluetooth();
   }
 
   @override
@@ -102,7 +118,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: toggleBluetooth,
         child: const Icon(Icons.connect_without_contact),
       ),
     );
