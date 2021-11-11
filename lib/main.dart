@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:core';
 
 void main() {
   runApp(MaterialApp(
@@ -23,6 +24,10 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late BluetoothConnection connection;
   var text="";
+  String temperature='N/A';
+  String steps = 'N/A';
+  String pulse = 'N/A';
+
 @override
 void initState(){
   super.initState();
@@ -30,7 +35,23 @@ void initState(){
   Future.delayed(const Duration(seconds:0),() async{
     try{
       connection = await BluetoothConnection.toAddress('98:D3:31:80:74:A6');
+      String currentData="";
       connection.input?.listen((Uint8List data){
+        String dataFromBand = ascii.decode(data);
+        dataFromBand.runes.forEach((int char)
+        {   String character = String.fromCharCode(char);
+          if(character == '/n'){
+              final split = currentData.split(',');
+              if(split.length!=3){return;}
+            currentData="";
+            setState(() {
+              temperature=int.tryParse(split[0])?.toString()??temperature;
+              steps = int.tryParse(split[1])?.toString()??steps;
+              pulse = int.tryParse(split[2])?.toString()??pulse;
+            });
+        }
+          else{currentData+character;}
+        });
        if(ascii.decode(data).contains('!')){
        connection.finish();}
       });
@@ -52,12 +73,12 @@ void initState(){
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children:const <Widget>[
-              Expanded(flex:1,child:FitBandCard(fitbandParameter: "Body Temperature (celcius)", fitbandParameterValue: "37°"),
+            children:<Widget>[
+              Expanded(flex:1,child:FitBandCard(fitbandParameter: "Body Temperature (celcius)", fitbandParameterValue: temperature),
              ),
-             Expanded(flex:1,child:FitBandCard(fitbandParameter: "Steps Taken", fitbandParameterValue: "259"),
+             Expanded(flex:1,child:FitBandCard(fitbandParameter: "Steps Taken", fitbandParameterValue:steps),
              ),
-             Expanded(flex:1,child:FitBandCard(fitbandParameter: "Heart Rate (beats/minute)", fitbandParameterValue: "71"),
+             Expanded(flex:1,child:FitBandCard(fitbandParameter: "Heart Rate (beats/minute)", fitbandParameterValue:pulse),
              ), ]
           ),
         ),
