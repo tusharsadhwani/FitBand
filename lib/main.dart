@@ -84,6 +84,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
+  void dispose() {
+    connection?.close();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
